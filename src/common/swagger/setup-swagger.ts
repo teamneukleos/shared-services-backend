@@ -5,11 +5,19 @@ import { ApiErrorResponseDto, PaginationMetaDto } from './api-envelope.dto';
 
 const SWAGGER_PATH = 'api/docs';
 
+function isSwaggerEnabled(configService: ConfigService): boolean {
+  const raw = configService.get<string>('ENABLE_SWAGGER');
+  if (raw === undefined || raw === '') {
+    // Enabled in every environment by default (including production).
+    return true;
+  }
+  return !['0', 'false', 'no', 'off'].includes(raw.trim().toLowerCase());
+}
+
 export function setupSwagger(app: INestApplication): void {
   const configService = app.get(ConfigService);
-  const nodeEnv = configService.get<string>('nodeEnv');
 
-  if (nodeEnv === 'production') {
+  if (!isSwaggerEnabled(configService)) {
     return;
   }
 

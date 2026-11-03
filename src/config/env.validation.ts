@@ -59,4 +59,5 @@ export const envValidationSchema = Joi.object({
       then: Joi.required(),
       otherwise: Joi.optional().default('http://localhost:3001'),
     }),
+  ENABLE_SWAGGER: Joi.string().optional().allow(''),
 });
