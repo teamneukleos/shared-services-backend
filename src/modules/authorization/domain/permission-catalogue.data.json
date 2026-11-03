@@ -1,0 +1,102 @@
+[
+  {
+    "code": "employee.create",
+    "description": "Create employee records"
+  },
+  {
+    "code": "employee.read",
+    "description": "View employee records"
+  },
+  {
+    "code": "employee.update",
+    "description": "Update employee records"
+  },
+  {
+    "code": "employee.status.change",
+    "description": "Change employment status"
+  },
+  {
+    "code": "onboarding.create",
+    "description": "Create onboarding plans"
+  },
+  {
+    "code": "onboarding.read",
+    "description": "View onboarding plans"
+  },
+  {
+    "code": "onboarding.update",
+    "description": "Update onboarding plans"
+  },
+  {
+    "code": "onboarding.task.manage",
+    "description": "Manage onboarding tasks"
+  },
+  {
+    "code": "onboarding.status.change",
+    "description": "Change onboarding status"
+  },
+  {
+    "code": "leave.type.create",
+    "description": "Create leave types"
+  },
+  {
+    "code": "leave.type.read",
+    "description": "View leave types"
+  },
+  {
+    "code": "leave.type.update",
+    "description": "Update leave types"
+  },
+  {
+    "code": "leave.balance.create",
+    "description": "Initialise leave balances"
+  },
+  {
+    "code": "leave.balance.read",
+    "description": "View leave balances"
+  },
+  {
+    "code": "leave.application.submit",
+    "description": "Submit leave applications"
+  },
+  {
+    "code": "leave.application.read",
+    "description": "View leave applications"
+  },
+  {
+    "code": "leave.application.review",
+    "description": "Approve or reject leave applications"
+  },
+  {
+    "code": "leave.application.withdraw",
+    "description": "Withdraw own leave applications"
+  },
+  {
+    "code": "organisation.read",
+    "description": "View organisation profile"
+  },
+  {
+    "code": "organisation.structure.read",
+    "description": "View business units, departments, teams, and positions"
+  },
+  {
+    "code": "organisation.structure.manage",
+    "description": "Manage business units, departments, teams, positions"
+  },
+  {
+    "code": "identity.user.manage",
+    "description": "Create and update user accounts"
+  },
+  {
+    "code": "identity.user.read",
+    "description": "View user accounts"
+  },
+  {
+    "code": "identity.role.manage",
+    "description": "Manage roles and permission assignments"
+  },
+  {
+    "code": "identity.role.read",
+    "description": "View roles and permissions"
+  }
+]

@@ -1,0 +1,1115 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum RecordStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum EmploymentStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  TERMINATED
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERN
+  TEMPORARY
+  OTHER
+}
+
+enum OnboardingStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum OnboardingTaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  SKIPPED
+}
+
+enum ApplicationStatus {
+  SUBMITTED
+  SCREENING
+  SHORTLISTED
+  INTERVIEW
+  OFFERED
+  HIRED
+  REJECTED
+  WITHDRAWN
+}
+
+enum LeaveRequestStatus {
+  DRAFT
+  SUBMITTED
+  PENDING
+  APPROVAL
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum LeaveTransactionType {
+  RESERVE
+  RELEASE
+  CONSUME
+}
+
+enum WorkflowStatus {
+  DRAFT
+  ACTIVE
+  SUSPENDED
+  RETIRED
+}
+
+enum WorkflowInstanceStatus {
+  RUNNING
+  COMPLETED
+  REJECTED
+  CANCELLED
+  FAILED
+}
+
+enum TaskStatus {
+  PENDING
+  CLAIMED
+  APPROVED
+  REJECTED
+  RETURNED
+  CANCELLED
+  EXPIRED
+}
+
+enum FinanceRequestStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  PAID
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  PENDING
+  APPROVAL
+  APPROVED
+  PARTIALLY_PAID
+  PAID
+  VOID
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum ReconciliationStatus {
+  DRAFT
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum AIRecommendationStatus {
+  GENERATED
+  REVIEWED
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum IntegrationProvider {
+  GOOGLE_WORKSPACE
+  ZOHO_FINANCE
+  BANK
+  OTHER
+}
+
+model Organisation {
+  id            String         @id @default(uuid())
+  name          String
+  code          String         @unique
+  status        RecordStatus   @default(ACTIVE)
+  businessUnits BusinessUnit[]
+  locations     Location[]
+  users         UserAccount[]
+  roles         Role[]
+  employees     Employee[]
+  leaveTypes    LeaveType[]
+  refreshTokens RefreshToken[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model BusinessUnit {
+  id             String       @id @default(uuid())
+  organisationId String
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  name           String
+  code           String
+  departments    Department[]
+  costCentres    CostCentre[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([organisationId, code])
+  @@index([organisationId])
+}
+
+model Department {
+  id              String             @id @default(uuid())
+  businessUnitId  String
+  businessUnit    BusinessUnit       @relation(fields: [businessUnitId], references: [id], onDelete: Restrict)
+  name            String
+  code            String
+  teams           Team[]
+  positions       Position[]
+  employees       Employee[]
+  financeRequests FinancialRequest[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@unique([businessUnitId, code])
+}
+
+model Team {
+  id           String     @id @default(uuid())
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  name         String
+  code         String
+  employees    Employee[]
+
+  @@unique([departmentId, code])
+}
+
+model Position {
+  id           String           @id @default(uuid())
+  departmentId String
+  department   Department       @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  title        String
+  code         String
+  employees    Employee[]
+  requisitions JobRequisition[]
+
+  @@unique([departmentId, code])
+}
+
+model Location {
+  id               String            @id @default(uuid())
+  organisationId   String
+  organisation     Organisation      @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  name             String
+  countryCode      String
+  timeZone         String
+  holidayCalendars HolidayCalendar[]
+}
+
+model CostCentre {
+  id             String                 @id @default(uuid())
+  businessUnitId String
+  businessUnit   BusinessUnit           @relation(fields: [businessUnitId], references: [id], onDelete: Restrict)
+  name           String
+  code           String
+  requestLines   FinancialRequestLine[]
+  budgetLines    BudgetLine[]
+
+  @@unique([businessUnitId, code])
+}
+
+model Person {
+  id            String     @id @default(uuid())
+  firstName     String
+  middleName    String?
+  lastName      String
+  preferredName String?
+  personalEmail String?
+  phone         String?
+  employee      Employee?
+  candidate     Candidate?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
+
+model UserAccount {
+  id                       String             @id @default(uuid())
+  organisationId           String
+  organisation             Organisation       @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  employeeId               String?            @unique
+  employee                 Employee?          @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  officialEmail            String
+  status                   RecordStatus       @default(ACTIVE)
+  externalIdentities       ExternalIdentity[]
+  roleAssignments          RoleAssignment[]
+  refreshTokens            RefreshToken[]
+  workflowTasks            WorkflowTask[]
+  auditEvents              AuditEvent[]
+  aiInteractions           AIInteraction[]
+  coordinatedOnboardings   OnboardingPlan[]   @relation("OnboardingCoordinator")
+  assignedOnboardingTasks  OnboardingTask[]   @relation("OnboardingTaskAssignee")
+  completedOnboardingTasks OnboardingTask[]   @relation("OnboardingTaskCompletedBy")
+  reviewedLeaveRequests    LeaveRequest[]     @relation("LeaveRequestReviewer")
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+
+  @@unique([organisationId, officialEmail])
+}
+
+model ExternalIdentity {
+  id       String              @id @default(uuid())
+  userId   String
+  user     UserAccount         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider IntegrationProvider
+  subject  String
+  email    String?
+
+  @@unique([provider, subject])
+}
+
+model RefreshToken {
+  id             String        @id @default(uuid())
+  userId         String
+  user           UserAccount   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organisationId String
+  organisation   Organisation  @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  tokenHash      String        @unique
+  familyId       String
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  replacedById   String?       @unique
+  replacedBy     RefreshToken? @relation("RefreshTokenReplacement", fields: [replacedById], references: [id], onDelete: SetNull)
+  replaces       RefreshToken? @relation("RefreshTokenReplacement")
+  createdAt      DateTime      @default(now())
+
+  @@index([userId])
+  @@index([familyId])
+  @@index([organisationId, userId])
+  @@index([expiresAt])
+}
+
+model Role {
+  id             String           @id @default(uuid())
+  organisationId String
+  organisation   Organisation     @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  name           String
+  code           String
+  permissions    RolePermission[]
+  assignments    RoleAssignment[]
+
+  @@unique([organisationId, code])
+}
+
+model Permission {
+  id          String           @id @default(uuid())
+  code        String           @unique
+  description String?
+  roles       RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model RoleAssignment {
+  id        String      @id @default(uuid())
+  userId    String
+  roleId    String
+  scopeType String?
+  scopeId   String?
+  user      UserAccount @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role        @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  startsAt  DateTime    @default(now())
+  endsAt    DateTime?
+
+  @@index([userId, roleId])
+}
+
+model Employee {
+  id                String              @id @default(uuid())
+  organisationId    String
+  organisation      Organisation        @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  employeeNumber    String
+  personId          String              @unique
+  person            Person              @relation(fields: [personId], references: [id], onDelete: Restrict)
+  workEmail         String
+  jobTitle          String
+  departmentId      String
+  department        Department          @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  teamId            String?
+  team              Team?               @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  positionId        String?
+  position          Position?           @relation(fields: [positionId], references: [id], onDelete: SetNull)
+  managerId         String?
+  manager           Employee?           @relation("EmployeeManager", fields: [managerId], references: [id], onDelete: SetNull)
+  directReports     Employee[]          @relation("EmployeeManager")
+  employmentType    EmploymentType      @default(FULL_TIME)
+  status            EmploymentStatus    @default(PENDING)
+  hireDate          DateTime
+  terminationDate   DateTime?
+  userAccount       UserAccount?
+  employments       Employment[]
+  onboardingPlans   OnboardingPlan[]
+  leaveRequests     LeaveRequest[]
+  leaveEntitlements LeaveEntitlement[]
+  leaveBalances     LeaveBalance[]
+  leaveTransactions LeaveTransaction[]
+  reviews           PerformanceReview[] @relation("ReviewEmployee")
+  managedReviews    PerformanceReview[] @relation("ReviewManager")
+  financeRequests   FinancialRequest[]  @relation("RequestEmployee")
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  version           Int                 @default(1)
+
+  @@unique([organisationId, employeeNumber])
+  @@unique([organisationId, workEmail])
+  @@index([organisationId, status])
+  @@index([organisationId, departmentId])
+  @@index([organisationId, managerId])
+}
+
+model Employment {
+  id         String         @id @default(uuid())
+  employeeId String
+  employee   Employee       @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  type       EmploymentType
+  startDate  DateTime
+  endDate    DateTime?
+  terms      Json?
+}
+
+model OnboardingPlan {
+  id                   String           @id @default(uuid())
+  employeeId           String
+  employee             Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  name                 String
+  notes                String?
+  startDate            DateTime
+  targetCompletionDate DateTime?
+  completedAt          DateTime?
+  status               OnboardingStatus @default(NOT_STARTED)
+  coordinatorUserId    String?
+  coordinator          UserAccount?     @relation("OnboardingCoordinator", fields: [coordinatorUserId], references: [id], onDelete: SetNull)
+  tasks                OnboardingTask[]
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  @@index([employeeId, status])
+  @@index([status, startDate])
+}
+
+model OnboardingTask {
+  id                String               @id @default(uuid())
+  planId            String
+  plan              OnboardingPlan       @relation(fields: [planId], references: [id], onDelete: Cascade)
+  title             String
+  description       String?
+  category          String?
+  isRequired        Boolean              @default(true)
+  dueDate           DateTime?
+  status            OnboardingTaskStatus @default(PENDING)
+  assigneeUserId    String?
+  assignee          UserAccount?         @relation("OnboardingTaskAssignee", fields: [assigneeUserId], references: [id], onDelete: SetNull)
+  completedAt       DateTime?
+  completedByUserId String?
+  completedBy       UserAccount?         @relation("OnboardingTaskCompletedBy", fields: [completedByUserId], references: [id], onDelete: SetNull)
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  @@index([planId, status])
+}
+
+model JobRequisition {
+  id            String       @id @default(uuid())
+  positionId    String
+  position      Position     @relation(fields: [positionId], references: [id], onDelete: Restrict)
+  headcount     Int
+  justification String
+  status        String
+  postings      JobPosting[]
+  createdAt     DateTime     @default(now())
+}
+
+model JobPosting {
+  id            String         @id @default(uuid())
+  requisitionId String
+  requisition   JobRequisition @relation(fields: [requisitionId], references: [id], onDelete: Restrict)
+  title         String
+  description   String
+  closeDate     DateTime?
+  applications  Application[]
+}
+
+model Candidate {
+  id            String        @id @default(uuid())
+  personId      String        @unique
+  person        Person        @relation(fields: [personId], references: [id], onDelete: Restrict)
+  source        String?
+  consentStatus String
+  applications  Application[]
+}
+
+model Application {
+  id                String                      @id @default(uuid())
+  candidateId       String
+  postingId         String
+  candidate         Candidate                   @relation(fields: [candidateId], references: [id], onDelete: Restrict)
+  posting           JobPosting                  @relation(fields: [postingId], references: [id], onDelete: Restrict)
+  status            ApplicationStatus           @default(SUBMITTED)
+  submittedAt       DateTime                    @default(now())
+  resume            Resume?
+  assessments       CandidateAssessment[]
+  interviews        Interview[]
+  offer             Offer?
+  aiRecommendations AIApplicantRecommendation[]
+
+  @@unique([candidateId, postingId])
+}
+
+model Resume {
+  id            String      @id @default(uuid())
+  applicationId String      @unique
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  documentId    String
+  parsedProfile Json?
+  parserVersion String?
+}
+
+model CandidateAssessment {
+  id            String      @id @default(uuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  type          String
+  score         Decimal?    @db.Decimal(5, 2)
+  assessorId    String?
+  notes         String?
+}
+
+model Interview {
+  id            String              @id @default(uuid())
+  applicationId String
+  application   Application         @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  stage         String
+  scheduledAt   DateTime?
+  status        String
+  feedback      InterviewFeedback[]
+}
+
+model InterviewFeedback {
+  id             String    @id @default(uuid())
+  interviewId    String
+  interview      Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  interviewerId  String
+  recommendation String
+  comments       String?
+
+  @@unique([interviewId, interviewerId])
+}
+
+model Offer {
+  id            String      @id @default(uuid())
+  applicationId String      @unique
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  terms         Json
+  expiryDate    DateTime?
+  status        String
+}
+
+model AIApplicantRecommendation {
+  id            String      @id @default(uuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  score         Decimal     @db.Decimal(5, 2)
+  rationale     Json
+  modelVersion  String
+  createdAt     DateTime    @default(now())
+}
+
+model LeaveType {
+  id             String         @id @default(uuid())
+  organisationId String
+  organisation   Organisation   @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  name           String
+  code           String
+  description    String?
+  unit           String         @default("DAYS")
+  paid           Boolean        @default(true)
+  status         RecordStatus   @default(ACTIVE)
+  policies       LeavePolicy[]
+  balances       LeaveBalance[]
+  requests       LeaveRequest[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@unique([organisationId, code])
+  @@index([organisationId, status])
+}
+
+model LeavePolicy {
+  id              String             @id @default(uuid())
+  leaveTypeId     String
+  leaveType       LeaveType          @relation(fields: [leaveTypeId], references: [id], onDelete: Restrict)
+  name            String
+  effectiveFrom   DateTime
+  effectiveTo     DateTime?
+  eligibilityRule Json
+  accrualRule     Json
+  carryOverRule   Json?
+  entitlements    LeaveEntitlement[]
+}
+
+model LeaveEntitlement {
+  id          String      @id @default(uuid())
+  employeeId  String
+  policyId    String
+  employee    Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  policy      LeavePolicy @relation(fields: [policyId], references: [id], onDelete: Restrict)
+  periodStart DateTime
+  periodEnd   DateTime
+  entitled    Decimal     @db.Decimal(10, 2)
+
+  @@unique([employeeId, policyId, periodStart, periodEnd])
+}
+
+model LeaveBalance {
+  id          String    @id @default(uuid())
+  employeeId  String
+  leaveTypeId String
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  leaveType   LeaveType @relation(fields: [leaveTypeId], references: [id], onDelete: Restrict)
+  entitled    Decimal   @db.Decimal(10, 2)
+  available   Decimal   @db.Decimal(10, 2)
+  reserved    Decimal   @db.Decimal(10, 2)
+  used        Decimal   @db.Decimal(10, 2)
+  version     Int       @default(1)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([employeeId, leaveTypeId])
+  @@index([leaveTypeId])
+}
+
+model LeaveRequest {
+  id                 String             @id @default(uuid())
+  employeeId         String
+  leaveTypeId        String
+  employee           Employee           @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  leaveType          LeaveType          @relation(fields: [leaveTypeId], references: [id], onDelete: Restrict)
+  startDate          DateTime
+  endDate            DateTime
+  quantity           Decimal            @db.Decimal(10, 2)
+  reason             String?
+  status             LeaveRequestStatus @default(PENDING)
+  workflowInstanceId String?            @unique
+  submittedAt        DateTime           @default(now())
+  reviewedAt         DateTime?
+  reviewedByUserId   String?
+  reviewedBy         UserAccount?       @relation("LeaveRequestReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  reviewComment      String?
+  transactions       LeaveTransaction[]
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  @@index([employeeId, status, startDate, endDate])
+  @@index([leaveTypeId, status])
+  @@index([status, submittedAt])
+}
+
+model LeaveTransaction {
+  id             String               @id @default(uuid())
+  employeeId     String
+  leaveRequestId String?
+  employee       Employee             @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  leaveRequest   LeaveRequest?        @relation(fields: [leaveRequestId], references: [id], onDelete: SetNull)
+  type           LeaveTransactionType
+  quantity       Decimal              @db.Decimal(10, 2)
+  occurredAt     DateTime             @default(now())
+
+  @@unique([leaveRequestId, type])
+  @@index([employeeId, occurredAt])
+}
+
+model HolidayCalendar {
+  id         String   @id @default(uuid())
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  name       String
+  holidays   Json
+}
+
+model AppraisalCycle {
+  id       String              @id @default(uuid())
+  name     String
+  startsAt DateTime
+  endsAt   DateTime
+  status   String
+  reviews  PerformanceReview[]
+}
+
+model PerformanceReview {
+  id         String             @id @default(uuid())
+  cycleId    String
+  employeeId String
+  managerId  String
+  cycle      AppraisalCycle     @relation(fields: [cycleId], references: [id], onDelete: Restrict)
+  employee   Employee           @relation("ReviewEmployee", fields: [employeeId], references: [id], onDelete: Restrict)
+  manager    Employee           @relation("ReviewManager", fields: [managerId], references: [id], onDelete: Restrict)
+  status     String
+  goals      Goal[]
+  comments   ReviewComment[]
+  aiDrafts   AIAppraisalDraft[]
+
+  @@unique([cycleId, employeeId])
+}
+
+model Goal {
+  id       String            @id @default(uuid())
+  reviewId String
+  review   PerformanceReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  title    String
+  metric   String?
+  target   String?
+  weight   Decimal           @db.Decimal(5, 2)
+}
+
+model ReviewComment {
+  id        String            @id @default(uuid())
+  reviewId  String
+  review    PerformanceReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  authorId  String
+  type      String
+  text      String
+  createdAt DateTime          @default(now())
+}
+
+model AIAppraisalDraft {
+  id            String            @id @default(uuid())
+  reviewId      String
+  review        PerformanceReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  sourceFacts   Json
+  generatedText String
+  modelVersion  String
+  createdAt     DateTime          @default(now())
+}
+
+model Vendor {
+  id          String       @id @default(uuid())
+  name        String
+  taxId       String?
+  status      RecordStatus @default(ACTIVE)
+  invoices    Invoice[]
+  bankDetails Json?
+}
+
+model FinancialRequest {
+  id                 String                 @id @default(uuid())
+  requestNumber      String                 @unique
+  requesterId        String
+  requester          Employee               @relation("RequestEmployee", fields: [requesterId], references: [id], onDelete: Restrict)
+  departmentId       String
+  department         Department             @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  type               String
+  currency           String                 @db.Char(3)
+  total              Decimal                @db.Decimal(19, 4)
+  status             FinanceRequestStatus   @default(DRAFT)
+  lines              FinancialRequestLine[]
+  paymentAllocations PaymentAllocation[]
+  aiSummaries        AIApprovalSummary[]
+  workflowInstanceId String?                @unique
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+}
+
+model FinancialRequestLine {
+  id           String           @id @default(uuid())
+  requestId    String
+  request      FinancialRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  description  String
+  quantity     Decimal          @db.Decimal(19, 4)
+  unitPrice    Decimal          @db.Decimal(19, 4)
+  accountCode  String?
+  costCentreId String?
+  costCentre   CostCentre?      @relation(fields: [costCentreId], references: [id], onDelete: SetNull)
+}
+
+model Invoice {
+  id                 String              @id @default(uuid())
+  vendorId           String
+  vendor             Vendor              @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+  invoiceNumber      String
+  currency           String              @db.Char(3)
+  amount             Decimal             @db.Decimal(19, 4)
+  issueDate          DateTime
+  dueDate            DateTime?
+  status             InvoiceStatus       @default(DRAFT)
+  paymentAllocations PaymentAllocation[]
+
+  @@unique([vendorId, invoiceNumber])
+}
+
+model Payment {
+  id            String              @id @default(uuid())
+  paymentNumber String              @unique
+  currency      String              @db.Char(3)
+  amount        Decimal             @db.Decimal(19, 4)
+  method        String
+  status        PaymentStatus       @default(PENDING)
+  externalRef   String?
+  allocations   PaymentAllocation[]
+  createdAt     DateTime            @default(now())
+}
+
+model PaymentAllocation {
+  id        String            @id @default(uuid())
+  paymentId String
+  payment   Payment           @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  invoiceId String?
+  invoice   Invoice?          @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  requestId String?
+  request   FinancialRequest? @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  amount    Decimal           @db.Decimal(19, 4)
+}
+
+model Budget {
+  id           String       @id @default(uuid())
+  name         String
+  fiscalPeriod String
+  currency     String       @db.Char(3)
+  status       String
+  lines        BudgetLine[]
+}
+
+model BudgetLine {
+  id           String      @id @default(uuid())
+  budgetId     String
+  budget       Budget      @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  costCentreId String?
+  costCentre   CostCentre? @relation(fields: [costCentreId], references: [id], onDelete: SetNull)
+  accountCode  String
+  allocated    Decimal     @db.Decimal(19, 4)
+  committed    Decimal     @default(0) @db.Decimal(19, 4)
+  spent        Decimal     @default(0) @db.Decimal(19, 4)
+}
+
+model AIApprovalSummary {
+  id           String           @id @default(uuid())
+  requestId    String
+  request      FinancialRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  summary      String
+  riskFlags    Json
+  modelVersion String
+  createdAt    DateTime         @default(now())
+}
+
+model BankAccount {
+  id           String          @id @default(uuid())
+  name         String
+  maskedNumber String
+  currency     String          @db.Char(3)
+  provider     String
+  status       RecordStatus    @default(ACTIVE)
+  statements   BankStatement[]
+}
+
+model BankStatement {
+  id             String                  @id @default(uuid())
+  bankAccountId  String
+  bankAccount    BankAccount             @relation(fields: [bankAccountId], references: [id], onDelete: Restrict)
+  periodStart    DateTime
+  periodEnd      DateTime
+  openingBalance Decimal                 @db.Decimal(19, 4)
+  closingBalance Decimal                 @db.Decimal(19, 4)
+  checksum       String
+  transactions   BankTransaction[]
+  sessions       ReconciliationSession[]
+
+  @@unique([bankAccountId, checksum])
+}
+
+model BankTransaction {
+  id              String                @id @default(uuid())
+  statementId     String
+  statement       BankStatement         @relation(fields: [statementId], references: [id], onDelete: Cascade)
+  transactionDate DateTime
+  description     String
+  reference       String?
+  amount          Decimal               @db.Decimal(19, 4)
+  balance         Decimal?              @db.Decimal(19, 4)
+  matches         ReconciliationMatch[]
+
+  @@index([statementId, transactionDate])
+}
+
+model ReconciliationSession {
+  id          String                    @id @default(uuid())
+  statementId String
+  statement   BankStatement             @relation(fields: [statementId], references: [id], onDelete: Restrict)
+  status      ReconciliationStatus      @default(DRAFT)
+  matches     ReconciliationMatch[]
+  exceptions  ReconciliationException[]
+  createdAt   DateTime                  @default(now())
+  completedAt DateTime?
+}
+
+model ReconciliationMatch {
+  id                String                @id @default(uuid())
+  sessionId         String
+  bankTransactionId String
+  session           ReconciliationSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  bankTransaction   BankTransaction       @relation(fields: [bankTransactionId], references: [id], onDelete: Restrict)
+  targetType        String
+  targetId          String
+  confidence        Decimal?              @db.Decimal(5, 2)
+  confirmedBy       String?
+  confirmedAt       DateTime?
+
+  @@unique([sessionId, bankTransactionId, targetType, targetId])
+}
+
+model ReconciliationException {
+  id        String                @id @default(uuid())
+  sessionId String
+  session   ReconciliationSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  type      String
+  details   Json
+  status    String
+}
+
+model WorkflowDefinition {
+  id        String             @id @default(uuid())
+  name      String
+  code      String
+  version   Int
+  status    WorkflowStatus     @default(DRAFT)
+  steps     WorkflowStep[]
+  instances WorkflowInstance[]
+
+  @@unique([code, version])
+}
+
+model WorkflowStep {
+  id           String             @id @default(uuid())
+  definitionId String
+  definition   WorkflowDefinition @relation(fields: [definitionId], references: [id], onDelete: Cascade)
+  key          String
+  name         String
+  sequence     Int
+  rule         Json
+
+  @@unique([definitionId, key])
+}
+
+model WorkflowInstance {
+  id           String                 @id @default(uuid())
+  definitionId String
+  definition   WorkflowDefinition     @relation(fields: [definitionId], references: [id], onDelete: Restrict)
+  businessType String
+  businessId   String
+  status       WorkflowInstanceStatus @default(RUNNING)
+  tasks        WorkflowTask[]
+  startedAt    DateTime               @default(now())
+  completedAt  DateTime?
+
+  @@index([businessType, businessId])
+}
+
+model WorkflowTask {
+  id          String           @id @default(uuid())
+  instanceId  String
+  instance    WorkflowInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  assigneeId  String?
+  assignee    UserAccount?     @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
+  stepKey     String
+  status      TaskStatus       @default(PENDING)
+  decision    String?
+  reason      String?
+  dueAt       DateTime?
+  completedAt DateTime?
+}
+
+model Document {
+  id              String            @id @default(uuid())
+  name            String
+  mimeType        String
+  storageProvider String
+  storageKey      String
+  checksum        String
+  classification  String
+  versions        DocumentVersion[]
+  attachments     AttachmentLink[]
+  createdAt       DateTime          @default(now())
+}
+
+model DocumentVersion {
+  id         String   @id @default(uuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  version    Int
+  storageKey String
+  checksum   String
+  createdAt  DateTime @default(now())
+
+  @@unique([documentId, version])
+}
+
+model AttachmentLink {
+  id         String   @id @default(uuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  entityType String
+  entityId   String
+  purpose    String?
+
+  @@unique([documentId, entityType, entityId])
+  @@index([entityType, entityId])
+}
+
+model Notification {
+  id          String                 @id @default(uuid())
+  recipientId String
+  type        String
+  title       String
+  body        String
+  data        Json?
+  readAt      DateTime?
+  deliveries  NotificationDelivery[]
+  createdAt   DateTime               @default(now())
+}
+
+model NotificationDelivery {
+  id             String       @id @default(uuid())
+  notificationId String
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  channel        String
+  status         String
+  providerId     String?
+  attempts       Int          @default(0)
+  failureReason  String?
+}
+
+model AuditEvent {
+  id          String       @id @default(uuid())
+  actorUserId String?
+  actor       UserAccount? @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  action      String
+  entityType  String
+  entityId    String?
+  oldValue    Json?
+  newValue    Json?
+  metadata    Json?
+  occurredAt  DateTime     @default(now())
+
+  @@index([entityType, entityId, occurredAt])
+}
+
+model IntegrationConnection {
+  id             String              @id @default(uuid())
+  provider       IntegrationProvider
+  tenantRef      String
+  credentialsRef String
+  scopes         String[]
+  status         RecordStatus        @default(ACTIVE)
+  mappings       ExternalMapping[]
+  syncJobs       SyncJob[]
+
+  @@unique([provider, tenantRef])
+}
+
+model ExternalMapping {
+  id              String                @id @default(uuid())
+  connectionId    String
+  connection      IntegrationConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  entityType      String
+  internalId      String
+  externalId      String
+  externalVersion String?
+
+  @@unique([connectionId, entityType, internalId])
+  @@unique([connectionId, entityType, externalId])
+}
+
+model SyncJob {
+  id           String                @id @default(uuid())
+  connectionId String
+  connection   IntegrationConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  direction    String
+  entityType   String
+  cursor       String?
+  status       String
+  startedAt    DateTime              @default(now())
+  finishedAt   DateTime?
+  error        Json?
+}
+
+model AIInteraction {
+  id                 String             @id @default(uuid())
+  userId             String
+  user               UserAccount        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  useCase            String
+  promptRef          String
+  responseRef        String?
+  permissionSnapshot Json
+  businessContext    Json?
+  status             String
+  recommendations    AIRecommendation[]
+  feedback           AIFeedback[]
+  actionProposals    AIActionProposal[]
+  createdAt          DateTime           @default(now())
+}
+
+model AIRecommendation {
+  id             String                 @id @default(uuid())
+  interactionId  String
+  interaction    AIInteraction          @relation(fields: [interactionId], references: [id], onDelete: Cascade)
+  type           String
+  targetEntity   String
+  targetId       String
+  recommendation Json
+  confidence     Decimal?               @db.Decimal(5, 2)
+  status         AIRecommendationStatus @default(GENERATED)
+}
+
+model AIFeedback {
+  id            String        @id @default(uuid())
+  interactionId String
+  interaction   AIInteraction @relation(fields: [interactionId], references: [id], onDelete: Cascade)
+  userId        String
+  rating        Int?
+  correction    String?
+  createdAt     DateTime      @default(now())
+}
+
+model AIActionProposal {
+  id            String        @id @default(uuid())
+  interactionId String
+  interaction   AIInteraction @relation(fields: [interactionId], references: [id], onDelete: Cascade)
+  actionType    String
+  payload       Json
+  status        String
+  confirmedBy   String?
+  confirmedAt   DateTime?
+}
